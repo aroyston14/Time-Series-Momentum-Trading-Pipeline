@@ -1,0 +1,61 @@
+# =============================================================================
+# Offline demo configuration: synthetic sample data, small grids, fast run.
+# Only keys that differ from configs/config.yaml need to be listed — this file
+# is deep-merged on top of the defaults in momentum_ml.config.
+# The sample data are SYNTHETIC (no API key / network needed) and results on
+# them say nothing about real markets.
+# =============================================================================
+
+extends: config.yaml   # path relative to this file
+
+project:
+  seed: 7
+
+data:
+  source: sample
+  tickers: [SPY, QQQ, IWM, DIA, EFA]
+  start: "2014-01-01"
+  end: "2024-12-31"
+  raw_dir: data/sample/raw_cache   # sample "downloads" are copied here
+  processed_dir: data/sample/processed
+
+walk_forward:
+  min_train_days: 756
+  test_days: 504
+
+tuning:
+  cv_splits: 3
+
+models:
+  logreg_l1:
+    grid:
+      C: [0.01, 0.1, 1.0]
+  logreg_l2:
+    grid:
+      C: [0.01, 0.1, 1.0]
+  random_forest:
+    grid:
+      n_estimators: [100]
+      max_depth: [3, 6]
+      min_samples_leaf: [100]
+      max_features: [sqrt]
+  xgboost:
+    grid:
+      learning_rate: [0.05]
+      max_depth: [2, 3]
+      n_estimators: [100]
+      subsample: [0.8]
+      colsample_bytree: [0.8]
+      reg_alpha: [0.0, 1.0]
+      reg_lambda: [1.0, 10.0]
+
+evaluation:
+  permutation_importance:
+    n_repeats: 3
+    max_rows: 5000
+
+outputs:
+  models_dir: models/sample
+  tables_dir: reports/sample/tables
+  figures_dir: reports/sample/figures
+  report_path: reports/sample/research_report.md

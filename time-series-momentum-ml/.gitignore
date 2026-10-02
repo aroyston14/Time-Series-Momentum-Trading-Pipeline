@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.env
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Data & generated outputs (reproducible from code + config)
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+models/*
+!models/.gitkeep
+reports/tables/*
+!reports/tables/.gitkeep
+reports/sample/tables/
+
+# Keep the small committed sample dataset, ignore derived sample outputs
+data/sample/raw_cache/
+data/sample/processed/
+models/sample/
+
+# OS
+.DS_Store
+Thumbs.db

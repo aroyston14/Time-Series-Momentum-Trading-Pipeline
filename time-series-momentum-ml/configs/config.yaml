@@ -1,0 +1,132 @@
+# =============================================================================
+# time-series-momentum-ml — main configuration (real data via yfinance)
+#
+# Every CLI accepts --config PATH. Paths are relative to the project root.
+# Copy this file to create variants (see configs/sample.yaml for the offline
+# synthetic-data configuration used by the tests and the quick demo run).
+# =============================================================================
+
+project:
+  name: time-series-momentum-ml
+  seed: 42                    # global seed: numpy, model random_state, CV, permutation importance
+  log_level: INFO
+
+data:
+  source: yahoo               # "yahoo" (yfinance download) or "sample" (offline synthetic data)
+  tickers: [SPY, QQQ, IWM, DIA, EFA]
+  extra_tickers: []           # add individual stocks here, e.g. [AAPL, MSFT, JPM]
+  market_ticker: SPY          # used for market features; downloaded even if not in tickers
+  start: "2010-01-01"
+  end: "2026-09-01"           # exclusive on Yahoo, so the last day used is 2026-08-31 (null = today)
+  raw_dir: data/raw
+  processed_dir: data/processed
+  sample_dir: data/sample
+  force_download: false       # false = reuse cached raw files (reproducibility)
+  max_retries: 3
+  retry_wait_seconds: 2.0
+  min_rows: 300               # tickers with fewer clean rows are dropped (logged)
+
+features:
+  return_windows: [1, 2, 5, 10, 20, 60]
+  volatility_windows: [5, 10, 20, 60]
+  ma_distance_windows: [5, 20, 50]
+  ma_spread: [5, 20]          # fast, slow
+  volume_ma_window: 20
+  drawdown_windows: [20, 60]
+  annualise_volatility: true
+  market_features:
+    enabled: true
+    lag: 1                    # SPY features are shifted by this many days (0 is also look-ahead-free
+                              # for US-listed assets that share SPY's close; 1 is conservative)
+    return_windows: [1, 5, 20]
+    volatility_windows: [20]
+
+target:
+  horizon: 1                  # predict sign of adj-close return from t to t+horizon
+  threshold: 0.0              # target = 1 if forward return > threshold
+
+split:
+  # Explicit dates take precedence over fractions when both are set.
+  train_end: null             # e.g. "2019-12-31"
+  val_end: null               # e.g. "2021-12-31"
+  train_frac: 0.60
+  val_frac: 0.20              # test = remainder (untouched during model selection)
+  purge_days: null            # null = target.horizon (drops overlapping labels at boundaries)
+
+walk_forward:
+  enabled: true
+  min_train_days: 756         # ~3 years before the first walk-forward test block
+  test_days: 252              # length of each expanding-window test block
+  scope: full                 # "full" (evaluation only — never used for selection) or "development"
+
+tuning:
+  cv_splits: 4                # TimeSeriesSplit folds over unique dates inside the training set
+  scoring: neg_log_loss
+  selection_metric: log_loss  # metric on the validation set used to pick the final model
+  n_jobs: -1
+
+models:
+  majority:
+    enabled: true
+  logreg_none:
+    enabled: true
+    class_weight: balanced
+    max_iter: 2000
+  logreg_l1:
+    enabled: true
+    class_weight: balanced
+    max_iter: 5000
+    grid:
+      C: [0.001, 0.01, 0.1, 1.0, 10.0]
+  logreg_l2:
+    enabled: true
+    class_weight: balanced
+    max_iter: 2000
+    grid:
+      C: [0.001, 0.01, 0.1, 1.0, 10.0]
+  random_forest:
+    enabled: true
+    class_weight: balanced_subsample
+    grid:
+      n_estimators: [200, 400]
+      max_depth: [3, 5, 8]
+      min_samples_leaf: [50, 200]
+      max_features: [sqrt, 0.5]
+  xgboost:
+    enabled: true
+    allow_sklearn_fallback: true   # if xgboost is not installed, use HistGradientBoosting (clearly labelled)
+    grid:
+      learning_rate: [0.03, 0.1]
+      max_depth: [2, 3]
+      n_estimators: [100, 300]
+      subsample: [0.7, 1.0]
+      colsample_bytree: [0.7, 1.0]
+      reg_alpha: [0.0, 0.1, 1.0]    # L1 penalty on leaf weights
+      reg_lambda: [1.0, 10.0]       # L2 penalty on leaf weights (xgboost default 1.0)
+
+evaluation:
+  refit_on_train_val: true    # final test predictions come from models refit on train+validation
+  permutation_importance:
+    enabled: true
+    set: validation           # importance is measured on validation data, not test
+    n_repeats: 10
+    scoring: roc_auc
+    max_rows: 20000
+
+backtest:
+  threshold: 0.50             # long if P(up) >= threshold
+  long_short: false           # true: short when P(up) < short_threshold
+  short_threshold: 0.50
+  cost_bps: 5.0               # one-way cost in basis points per unit of position change
+  execution_lag: 0            # 0 = trade at close t on the signal from close t (idealised MOC);
+                              # 1 = trade one day later (conservative). Sensitivity is reported.
+  risk_free_rate: 0.0         # annual, used for Sharpe
+  periods_per_year: 252
+  ma_rule_window: 50          # benchmark: long when adj close > its N-day MA (must be in ma_distance_windows)
+  rolling_vol_window: 63
+
+outputs:
+  models_dir: models
+  tables_dir: reports/tables
+  figures_dir: reports/figures
+  report_path: reports/research_report.md
