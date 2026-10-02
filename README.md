@@ -171,4 +171,4 @@ seed, and an end-to-end pipeline run.
 
 # Use of generative AI in this project:
 
-This was the first professional research project I have conducted of this size and I used generative AI to guide me regarding proper programming etiquette and file structure, along with help with debugging and some data formatting issues. Furthermore, I used an LLM to produce the report based on the results of each model, having given it the information and limitations I wanted to include.
+This was the first professional research project I have conducted of this size and I used generative AI to guide me regarding proper programming etiquette and file structure, along with help with debugging and formatting the report outputs.
